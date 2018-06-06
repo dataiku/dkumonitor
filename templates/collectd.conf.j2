@@ -1,0 +1,32 @@
+Hostname    "{{collectd_hostname}}"
+#FQDNLookup   true
+BaseDir     "{{dkumonitor_home}}/storage/collectd"
+PIDFile     "{{dkumonitor_home}}/run/collectd.pid"
+{% if not system_collectd %}
+PluginDir   "{{dkumonitor_home}}/lib/collectd"
+TypesDB     "{{dkumonitor_home}}/lib/collectd/types.db"
+{% endif %}
+
+AutoLoadPlugin true
+CollectInternalStats true
+Interval     300
+
+#MaxReadInterval 86400
+#Timeout         2
+#ReadThreads     5
+#WriteThreads    5
+
+# Limit the size of the write queue. Default is no limit. Setting up a limit is
+# recommended for servers handling a high volume of traffic.
+#WriteQueueLimitHigh 1000000
+#WriteQueueLimitLow   800000
+
+<Plugin logfile>
+	LogLevel err
+	File "{{dkumonitor_home}}/run/collectd.log"
+	Timestamp true
+	PrintSeverity true
+</Plugin>
+
+Include "conf/collectd.d/*.conf"
+

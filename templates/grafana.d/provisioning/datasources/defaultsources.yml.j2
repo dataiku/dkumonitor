@@ -1,0 +1,10 @@
+apiVersion: 1
+datasources:
+- name: DkuCarbonAPI
+  type: graphite
+  access: proxy
+  orgId: 1
+  url:  "http://{{grafana_carbon_host}}:{{carbonapi_http_port}}"
+  isDefault: true
+  editable: true
+

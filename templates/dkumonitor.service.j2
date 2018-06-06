@@ -1,0 +1,18 @@
+[Unit]
+Description=Dku monitor process control
+After=network.target
+
+[Service]
+Type=forking
+User={{dkumonitor_user}}
+ExecStart={{dkumonitor_home}}/bin/dkm start
+TimeoutStartSec=60
+ExecStop={{dkumonitor_home}}/bin/dkm stop
+TimeoutStopSec=60
+ExecReload={{dkumonitor_home}}/bin/dkm restart
+KillMode=control-group
+Restart=on-failure
+RestartSec=50s
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,227 @@
+#!/usr/bin/env bash
+
+# Starts / stops Dataiku DSS processes
+
+# Usages:
+#
+# Control all child processes at once through supervisord
+# $0 (start | stop | restart | status)
+#
+# Control individual child processes through supervisord
+# $0 (start | stop | restart | status) PROCESS
+#
+# Low-level command used by supervisord to run individual child processes (in foreground)
+# $0 run PROCESS
+#
+# where PROCESS is one of (go-carbon | carbonapi | grafana-server | collectd)
+
+#if [ ! -f "${DKUMONITOR_HOME}/run/svd.pid" ]; then
+  #python -m "supervisor.supervisord" -c "${DKUMONITOR_HOME}/conf/supervisord.conf"
+#fi
+#python -m "supervisor.supervisorctl" -c "${DKUMONITOR_HOME}/conf/supervisord.conf" "$@"
+
+me=$(basename "$0")
+
+if [ $EUID -eq 0 ]; then
+  echo >&2 "*** $me: running dkumonitor under superuser account is not supported."
+  exit 1
+fi
+
+
+########################################
+#
+# get args from command line
+#
+########################################
+
+Usage() {
+  echo "Usage: $me (start | stop | status | restart | reopenlogs)" >&2
+  exit 1
+}
+
+case "$1" in
+  start | stop | status | restart | run | reopenlogs | reload)
+    action="$1"
+    ;;
+  * )
+    Usage
+    ;;
+esac
+
+# Load basic environment
+BINDIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )"
+source ${BINDIR}/env-default
+source ${BINDIR}/env-site
+if [ -z "$DKUMONITOR_ROOT" ]; then
+  echo >&2 "FATAL: DKUMONITOR_ROOT is not defined. Please check $BINDIR/env-default"
+  exit 1
+fi
+if [ -z "$DKUMONITOR_HOME" ]; then
+  echo >&2 "FATAL: DKUMONITOR_HOME is not defined. Please check $BINDIR/env-default"
+  exit 1
+fi
+
+# Final environment setup
+export DKUMONITOR_ROOT
+export DKUMONITOR_HOME
+source "${DKUMONITOR_HOME}/pyenv/bin/activate"
+
+# Runtime directory
+export DKURUNDIR="${DKUMONITOR_HOME}/run"
+mkdir -p "$DKURUNDIR"
+
+########################################
+# Child processes definition: DSS
+########################################
+
+run_go-carbon() {
+  exec "${DKUMONITOR_ROOT}/bin/go-carbon" -config=conf/go-carbon.conf -daemon=false
+}
+
+run_carbonapi() {
+  exec "${DKUMONITOR_ROOT}/bin/carbonapi" -config=conf/carbonapi.yml
+}
+
+run_grafana-server() {
+  exec "${DKUMONITOR_ROOT}/bin/grafana-server" -config=conf/grafana.ini
+}
+
+run_grafana-collectd() {
+  exec "${DKUMONITOR_ROOT}/bin/collectd" -C conf/collectd.conf -f
+}
+
+########################################
+# Supervisord process manager
+########################################
+
+start_supervisord() {
+  python -m supervisor.supervisord -c "$DKUMONITOR_HOME/conf/supervisord.conf"
+}
+
+run_supervisord() {
+  exec python -m supervisor.supervisord -c "$DKUMONITOR_HOME/conf/supervisord.conf"
+}
+
+# supervisorctl COMMAND [ARG ...]
+supervisorctl() {
+  # Need to check supervisorctl answer as exit status is always 0
+  # https://github.com/Supervisor/supervisor/issues/24
+  # Will be fixed in supervisor 4.x if it ever releases
+  test -S "${DKUMONITOR_HOME}/run/svd.sock" &&
+  python -m supervisor.supervisorctl \
+    -c "${DKUMONITOR_HOME}/conf/supervisord.conf" \
+    pid | grep -qE '^[0-9]+$' || {
+    echo "$me: dkumonitor supervisor is not running" >&2
+    return 1
+  }
+  python -m supervisor.supervisorctl \
+    -c "${DKUMONITOR_HOME}/conf/supervisord.conf" \
+    "$@"
+}
+
+########################################
+# Wait for process transitions
+########################################
+
+wait_supervisor_start() {
+  echo "Waiting for dkumonitor supervisor to start ..."
+  for i in $(seq 1 10); do
+      sleep 2
+      if supervisorctl status; then
+        echo "dkumonitor started, pid=$(cat "${DKURUNDIR}/svd.pid")"
+        return 0
+      fi
+  done
+  echo "*** $me : supervisor failed to start.
+You can look for startup error messages in log file:
+    $DKURUNDIR/supervisord.log
+" >&2
+  return 1
+}
+
+wait_supervisor_stop() {
+  echo "Waiting for dkumonitor to stop ..."
+  for i in $(seq 1 10); do
+    sleep 2
+    if ! pid=$(cat "$DKURUNDIR"/svd.pid 2>/dev/null) || [ -z "$pid" ] || ! ps -p "$pid" -f; then
+      echo "dkumonitor stopped."
+      return 0
+    fi
+  done
+  echo "*** $me : dkumonitor failed to stop" >&2
+  return 1
+}
+
+
+
+#######################################################
+# Global actions
+#######################################################
+
+start_all() {
+  start_supervisord
+  wait_supervisor_start
+}
+
+stop_all() {
+  supervisorctl shutdown
+  wait_supervisor_stop
+}
+
+reload_all() {
+  supervisorctl reload || {
+    start_supervisord
+    wait_supervisor_start
+  }
+}
+
+########################################
+# Main entry point
+########################################
+
+if [ $# -eq 1 -a "$action" != "run" ]; then
+  action="${action}_all"
+elif [ $# -eq 1 ]; then
+  process="supervisord"
+elif [ $# -eq 2 ]; then
+  case "$2" in
+    go-carbon | carbonapi | grafana-server | collectd)
+      process="$2"
+      ;;
+    * )
+      Usage
+      ;;
+  esac
+else
+  Usage
+fi
+
+case "$action" in
+  start_all)
+    start_all
+    ;;
+  stop_all)
+    stop_all
+    ;;
+  status_all)
+    supervisorctl status
+    ;;
+  restart_all)
+    stop_all || echo "Stop failed (ignored)"
+    start_all
+    ;;
+  reload_all)
+    reload_all
+    ;;
+  reopenlogs_all)
+    pid="$(supervisorctl pid)" &&
+    echo "Reopening supervisor logs" &&
+    kill -USR2 "$pid"
+    ;;
+  start | stop | restart | status)
+    supervisorctl "$action" "$process"
+    ;;
+  run)
+    "run_$process"
+    ;;
+esac

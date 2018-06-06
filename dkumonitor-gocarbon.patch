@@ -1,0 +1,78 @@
+diff --git i/receiver/tcp/tcp.go w/receiver/tcp/tcp.go
+index 0536583..6ddfb25 100644
+--- i/receiver/tcp/tcp.go
++++ w/receiver/tcp/tcp.go
+@@ -52,6 +52,7 @@ type Options struct {
+ 	Listen      string `toml:"listen"`
+ 	Enabled     bool   `toml:"enabled"`
+ 	BufferSize  int    `toml:"buffer-size"`
++  ReadTimeout int    `toml:"read-timeout"`
+ 	Compression string `toml:"compression"`
+ }
+ 
+@@ -60,6 +61,7 @@ func NewOptions() *Options {
+ 		Listen:     ":2003",
+ 		Enabled:    true,
+ 		BufferSize: 0,
++    ReadTimeout: 120,
+ 	}
+ }
+ 
+@@ -68,6 +70,7 @@ type FramingOptions struct {
+ 	MaxMessageSize uint32 `toml:"max-message-size"`
+ 	Enabled        bool   `toml:"enabled"`
+ 	BufferSize     int    `toml:"buffer-size"`
++  ReadTimeout    int    `toml:"read-timeout"`
+ }
+ 
+ func NewFramingOptions() *FramingOptions {
+@@ -76,6 +79,7 @@ func NewFramingOptions() *FramingOptions {
+ 		MaxMessageSize: 67108864, // 64 Mb
+ 		Enabled:        true,
+ 		BufferSize:     0,
++    ReadTimeout: 120,
+ 	}
+ }
+ 
+@@ -94,6 +98,7 @@ type TCP struct {
+ 	buffer          chan *points.Points
+ 	logger          *zap.Logger
+ 	decompressor    decompressor
++  readTimeout     int
+ }
+ 
+ // Addr returns binded socket address. For bind port 0 in tests
+@@ -118,6 +123,7 @@ func newTCP(name string, options *Options, store func(*points.Points)) (*TCP, er
+ 		out:    store,
+ 		name:   name,
+ 		logger: zapwriter.Logger(name),
++    readTimeout: options.ReadTimeout,
+ 	}
+ 
+ 	if options.BufferSize > 0 {
+@@ -150,6 +156,7 @@ func newFraming(parser string, name string, options *FramingOptions, store func(
+ 		logger:         zapwriter.Logger(name),
+ 		maxMessageSize: options.MaxMessageSize,
+ 		isFraming:      true,
++    readTimeout:    options.ReadTimeout,
+ 	}
+ 
+ 	switch parser {
+@@ -200,7 +207,7 @@ func (rcv *TCP) HandleConnection(conn net.Conn) {
+ 	})
+ 
+ 	lastDeadline := time.Now()
+-	readTimeout := 2 * time.Minute
++	readTimeout := time.Duration(rcv.readTimeout) * time.Second
+ 	conn.SetReadDeadline(lastDeadline.Add(readTimeout))
+ 
+ 	for {
+@@ -268,7 +275,7 @@ func (rcv *TCP) handleFraming(conn net.Conn) {
+ 	framedConn.MaxFrameSize = uint(rcv.maxMessageSize)
+ 
+ 	for {
+-		conn.SetReadDeadline(time.Now().Add(2 * time.Minute))
++		conn.SetReadDeadline(time.Now().Add(time.Duration(rcv.readTimeout) * time.Second))
+ 		data, err := framedConn.ReadFrame()
+ 		if err == io.EOF {
+ 			return

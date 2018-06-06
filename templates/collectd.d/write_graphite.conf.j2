@@ -1,0 +1,18 @@
+<Plugin write_graphite>
+  <Node "example">
+    Host "{{collectd_carbon_host}}"
+    Port "{{carbon_tcp_port}}"
+    Protocol "tcp"
+    ReconnectInterval 0
+    LogSendErrors true
+    Prefix "collectd."
+    #Postfix "collectd"
+    StoreRates true
+    AlwaysAppendDS false
+    EscapeCharacter "_"
+    SeparateInstances true
+    PreserveSeparator true
+    DropDuplicateFields false
+  </Node>
+</Plugin>
+

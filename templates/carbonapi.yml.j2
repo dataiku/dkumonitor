@@ -1,0 +1,15 @@
+listen: "{{carbonapi_listening_ip}}:{{carbonapi_http_port}}"
+concurency: 20
+cache:
+   # Type of caching. Valid: "mem", "memcache", "null"
+   type: "null"
+upstreams:
+  backends:
+    - "http://127.0.0.1:{{carbon_carbonserver_port}}"
+logger:
+  - logger: ""
+    file: "{{dkumonitor_home}}/run/carbonapi.log" 
+    level: "warn"
+    encoding: "console"
+    encodingTime: "iso8601"
+
