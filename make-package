@@ -87,19 +87,19 @@ if [ ! -f node_modules/yarn/bin/yarn ]; then
     log "ERROR: npm is required to build dkumonitor"
     exit 1
   else
-    log "installs yarn builder"
+    log "Installs yarn builder"
     exec_logged npm install yarn
   fi
 fi
 if [ ! -f pyenv/bin/activate ]; then
-  log "installs the required pyenv"
+  log "Installs the required pyenv"
   mkdir pyenv
   exec_logged virtualenv -p python2.7 pyenv
   source pyenv/bin/activate
   exec_logged pip install pip --upgrade
   exec_logged pip install setuptools --upgrade
 else
-  log "loads existing pyenv"
+  log "Loads existing pyenv"
   source pyenv/bin/activate
 fi
 
@@ -157,165 +157,11 @@ exec_logged cd "collectd-${COLLECTD_VERSION}"
 # Thit script does not enforce anything except for xfs support in the disk module
 # because it needs explicit request. Any orther module will be built if the 
 # dependencies are available. The official image is built with a good part of them
+# We explicitely remove the udev dependency for the disk module
 exec_logged ./configure \
-    --enable-all-plugins=no \
-    #--enable-aggregation \
-    #--enable-amqp    \
-    #--enable-apache  \
-    #--enable-apcups  \
-    #--enable-apple_sensors \
-    #--enable-aquaero \
-    #--enable-ascent  \
-    #--enable-barometer \
-    #--enable-battery \
-    #--enable-bind  \
-    #--enable-ceph  \
-    #--enable-cgroups \
-    #--enable-chrony \
-    #--enable-conntrack \
-    #--enable-contextswitch \
-    #--enable-cpu \
-    #--enable-cpufreq \
-    #--ensable-cpusleep  \
-    #--enable-csv \
-    #--enable-curl  \
-    #--enable-curl_json \
-    #--enable-curl_xml  \
-    #--enable-dbi \
-    #--enable-df  \
-    #--enable-disk  \
-    #--enable-dns \
-    #--enable-dpdkevents \
-    #--enable-dpdkstat  \
-    #--enable-drbd  \
-    #--enable-email \
-    #--enable-entropy \
-    #--enable-ethstat \
-    #--enable-exec  \
-    #--enable-fhcount \
-    #--enable-filecount \
-    #--enable-fscache \
-    #--enable-gmond \
-    #--enable-gps \
-    #--enable-grpc  \
-    #--enable-hddtemp \
-    #--enable-hugepages \
-    #--enable-intel_pmu \
-    #--enable-intel_rdt \
-    #--enable-interface \
-    #--enable-ipc \
-    #--enable-ipmi  \
-    #--enable-iptables  \
-    #--enable-ipvs  \
-    #--enable-irq \
-    #--enable-java  \
-    #--enable-load  \
-    #--enable-logfile \
-    #--enable-log_logstash  \
-    #--enable-lpar  \
-    #--enable-lua \
-    #--enable-lvm \
-    #--enable-madwifi \
-    #--enable-match_empty_counter \
-    #--enable-match_hashed  \
-    #--enable-match_regex \
-    #--enable-match_timediff  \
-    #--enable-match_value \
-    #--enable-mbmon \
-    #--enable-mcelog  \
-    #--enable-md  \
-    #--enable-memcachec \
-    #--enable-memcached \
-    #--enable-memory  \
-    #--enable-mic \
-    #--enable-modbus  \
-    #--enable-mqtt  \
-    #--enable-multimeter  \
-    #--enable-mysql \
-    #--enable-netapp  \
-    #--enable-netlink \
-    #--enable-network \
-    #--enable-nfs \
-    #--enable-nginx \
-    #--enable-notify_desktop  \
-    #--enable-notify_email  \
-    #--enable-notify_nagios \
-    #--enable-ntpd  \
-    #--enable-numa  \
-    #--enable-nut \
-    #--enable-olsrd \
-    #--enable-onewire \
-    #--enable-openldap  \
-    #--enable-openvpn \
-    #--enable-oracle  \
-    #--enable-ovs_events  \
-    #--enable-ovs_stats \
-    #--enable-perl  \
-    #--enable-pf  \
-    #--enable-pinba \
-    #--enable-ping  \
-    #--enable-postgresql  \
-    #--enable-powerdns  \
-    #--enable-processes \
-    #--enable-protocols \
-    #--enable-python  \
-    #--enable-redis \
-    #--enable-routeros  \
-    #--enable-rrdcached \
-    #--enable-rrdtool \
-    #--enable-sensors \
-    #--enable-serial  \
-    #--enable-sigrok  \
-    #--enable-smart \
-    #--enable-snmp  \
-    #--enable-snmp_agent  \
-    #--enable-statsd  \
-    #--enable-swap  \
-    #--enable-synproxy  \
-    #--enable-syslog  \
-    #--enable-table \
-    #--enable-tail_csv  \
-    #--enable-tail  \
-    #--enable-tape  \
-    #--enable-target_notification \
-    #--enable-target_replace  \
-    #--enable-target_scale  \
-    #--enable-target_set  \
-    #--enable-target_v5upgrade  \
-    #--enable-tcpconns  \
-    #--enable-teamspeak2  \
-    #--enable-ted \
-    #--enable-thermal \
-    #--enable-threshold \
-    #--enable-tokyotyrant \
-    #--enable-turbostat \
-    #--enable-unixsock  \
-    #--enable-uptime  \
-    #--enable-users \
-    #--enable-uuid  \
-    #--enable-varnish \
-    #--enable-virt  \
-    #--enable-vmem  \
-    #--enable-vserver \
-    #--enable-wireless  \
-    #--enable-write_graphite  \
-    #--enable-write_http  \
-    #--enable-write_kafka \
-    #--enable-write_log \
-    #--enable-write_mongodb \
-    #--enable-write_prometheus \
-    #--enable-write_redis \
-    #--enable-write_riemann \
-    #--enable-write_sensu \
-    #--enable-write_tsdb  \
-    #--enable-xencpu  \
-    #--enable-xmms  \
-    #--enable-zfs_arc \
-    #--enable-zone  \
-    #--enable-zookeeper \
+    --with-libudev=/dev/null \
     --enable-xfs \
     --enable-static=no
-
 
 exec_logged make -j8
 cd - &>/dev/null
