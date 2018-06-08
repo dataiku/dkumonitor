@@ -23,6 +23,7 @@ installer -d|--directory DATA_DIR [-t|--type INSTALL_TYPE]
       server:         Installs go-carbon, carbonapi and grafana, but does not collect data from this machine.
       backend:        Installs go-carbon and carbonapi, no grafana, no collectd
       backend-agent:  Like backend, but with collectd.
+      frontend:       Grafana only.
       all:            Installs all of it.
 
 -u, --update:
@@ -39,7 +40,7 @@ installer -d|--directory DATA_DIR [-t|--type INSTALL_TYPE]
     one packaged with dku-monitor
 
 --carbon-server:
-    hostname of the carbon server when it is an agent or frontend install.
+    hostname of the carbon/carbonapi server when it is an agent/frontend install.
 
 --hostname:
     Override the fqdn. Will splitted on "." and reversed to be used in collecd.
@@ -99,11 +100,6 @@ do
       update_not_allowed_options=1
       ;;
     --carbon-server)
-      carbon_server=$2
-      update_not_allowed_options=1
-      shift
-      ;;
-    --carbon-port)
       carbon_server=$2
       update_not_allowed_options=1
       shift
