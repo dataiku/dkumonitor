@@ -54,10 +54,10 @@ And thats it. Use `--help` on the installer to see the possible flags:
 This generates the following files and directories:
 
 - `conf` contains the configuration files. Those can be customized and wont be modified by the update mode.
-- `bin` contains a single symlink to the starter script
+- `bin` contains simlinks and configuration to link back to the packaged binaries.
 - `storage` is were every persistent data is kept. That is whisper files, the Grafana sqlite3 database as well as its sessions and plugins (if you install some). You might want to backup this one.
-- `run` contains pid files, unix domain sockets and log files
-- `static` is a symlink to the Grafana fronted static assets
+- `run` contains pid files, unix domain sockets and log files.
+- `static` is a symlink to the Grafana fronted static assets.
 
 
 ## Usage
@@ -65,12 +65,12 @@ This generates the following files and directories:
 Launch the daemons:
 
 ```
-data_dir/bin/dkm start
+DATA_DIR/bin/dkm start
 ```
 
-The command line usage is that of `supervisorctl`. Arguments are directly forwarded to `supervisorctl`. The `supervisord` is started if its pid file is not there, but it does not start any service by default. On MacOS, `dkumonitor` must be launched as root if you want disks and cpu metrics. This is a requirement of `collectd`. `telegraf` is able to get these metrics without privileged access, but it does not have he `processes` plugin used to track specifically JEKs and FEKs. Since they both have the usage, `telegraf`is not shipped. However, a config file for it is provided, as well as a commented section in the `supervisord` config file.
+You can use `stop`, `restart` and `status`. Each of this commands can be executed onto a single servicde. For instance, to restart only `collectd`, use `DATA_DIR/bin/dkm restart collectd`.
 
-You can then use the various services. Grafana as a default admin login that you can change interactively of in its config file before launch.
+You can then use the various services. Grafana has a default admin login that you can change interactively or in its config file before launch.
 
 ## Install the boot service
 
@@ -94,21 +94,24 @@ No configuration files will be modified this way.
 
 ## Additional modules
 
-The *dkumonitor* agent is *collectd* and is packaged with a wide variety of modules. Only a few of them are used by default. To use additional modules, add files with their configuration in `DATA_DIR/conf/collectd.d/`. You must ensure that the modules dependencies are installed. Please refer to the collectd documentation and use the `ldd` command onto you module onto the module file `./dkumonitor-x.x.x/lib/collectd/MODULE_NAME.so` to check if its dependencies are all available.
+The *dkumonitor* agent is *collectd* and is packaged with a wide variety of modules. Only a few of them are used by default. To use additional modules, add files with their configuration in `DATA_DIR/conf/collectd.d/`. You must ensure that the modules dependencies are installed. Please refer to the collectd documentation and use the `ldd` command onto the module file `./dkumonitor-x.x.x/lib/collectd/MODULE_NAME.so` to check if its dependencies are all available.
 
 ## Configure DSS
 
 ### Full system monitoring
 
-Run the DSS monitoring integration:
+Stop DSS, then Run the DSS monitoring integration:
 
 ```
-DSS_DATA_DUR/bin/dssadmin install-monitoring-integration -graphiteServer DKU_MONITOR_HOST:DKU_MONITOR_PORT+1
+DSS_DATA_DIR/bin/dssadmin install-monitoring-integration \
+    -graphiteServer DKU_MONITOR_HOST:DKU_MONITOR_PORT+1
 ```
+
+Additional flags are available, use `DSS_DATA_DIR/bin/dssadmin install-monitoring-integration -h` to see them. Restart DSS when you are done.
 
 ### API nodes QPS for API Deployer 
 
-If you dont want a full system monitoring but still want in DSS monitoring with the API Deployer, add the following keys in `DSS_DATA_DIR/config/server.json`:
+If you dont want a full system monitoring but still want API nodes monitoring within the API Deployer, add the following keys in `DSS_DATA_DIR/config/server.json`:
 
 ```
 "graphiteCarbonServerURL":"DKU_MONITOR_HOST:DKU_MONITOR_PORT+1",
@@ -119,7 +122,7 @@ The value of the environment variable `DKU_GRAPHITE_ADDITIONAL_PREFIX` will be a
 
 ### API Deployer
 
-Go to *API Deployer* `->` *Infrastructures* `->`*YOUR_INFRASTRUCTURE* `->` *Settinfs* `->` *API nodes*, and add the prefix of each API node.Go to *API Deployer* `->` *Infrastructures* `->`*YOUR_INFRASTRUCTURE* `->` *Settings* `->` *Monitoring*, and set the URL of the *carbonapi* endpoint which is `http://DKUMONITOR_HOST:DKUMONITOR_PORT+2`. You can then monitor the API nodes activity right from each service homepage in the API Deployer.
+Go to *API Deployer* `->` *Infrastructures* `->`*YOUR_INFRASTRUCTURE* `->` *Settings* `->` *API nodes*, and add the prefix of each API node. Go to *API Deployer* `->` *Infrastructures* `->`*YOUR_INFRASTRUCTURE* `->` *Settings* `->` *Monitoring*, and set the URL of the *carbonapi* endpoint which is `http://DKUMONITOR_HOST:DKUMONITOR_PORT+2`. You can then monitor the API nodes activity right from each service homepage in the API Deployer.
 
 
 # Build
@@ -139,16 +142,4 @@ Go to *API Deployer* `->` *Infrastructures* `->`*YOUR_INFRASTRUCTURE* `->` *Sett
 ./make-package
 ```
 
-It takes some time, especially for Grafana frontend. A tarball is generated into the `dist` directory.  Optionally, when you need to develop on the package script, you can use the `--skip-build` and `--skip-archive` flags to skip the compilation and compression passes. You can follow more details about the compilation process by tailing `build/build.log`.
-
-
-## Configure DSS
-
-In the general settings, put in the address of the server as well as the `port+1`, which the one given at the installation. It is not needed to restart the studio. Using `dataiku.dss.an_instance_name` prefix is highly recommended as well.
-
-
-# TODO list
-
-- Harden the configuration for auhtentication
-- Write a systemd service file template and a script to install it
-
+It takes some time, especially for Grafana frontend. A tarball is generated into the `dist` directory.  Optionally, when you need to develop on the package script, you can use the `--skip-build` and `--skip-archive` flags to skip the compilation and compression passes. You can follow more details about the compilation process by tailing `build/build.log`. The actual list of collectd modules built depends on which dependencies for them are available at compile time. The `udev` support in the `disk` module is disabled for portability reasons.
