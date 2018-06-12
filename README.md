@@ -23,7 +23,14 @@ The target system must have `python2.7` installed.
 
 ## Installation
 
-Download the latest stable version [here](https://downloads.dataiku.com/public/dkumonitor/download_latest.html).
+Download the latest stable version [here](https://downloads.dataiku.com/public/dkumonitor/download_latest.html). Or use `curl` and `jq`:
+
+```
+latest_version=$(curl -s https://downloads.dataiku.com/latest_dkumonitor.json|jq -r '.version')
+curl -O https://downloads.dataiku.com/public/dkumonitor/$latest_version/dkumonitor-$latest_version.tar.gz
+```
+
+Unpack and run the installer:
 
 ```
 tar xf dkumonitor-x.x.x.tar.gz
