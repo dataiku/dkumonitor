@@ -27,8 +27,10 @@ Download the latest stable version [here](https://downloads.dataiku.com/public/d
 
 ```
 tar xf dkumonitor-x.x.x.tar.gz
-./dkumonitor-x.x.x/installer -d data_dir -p port
+./dkumonitor-x.x.x/installer -d DATA_DIR -p PORT 
 ```
+
+`DATA_DIR` is the directory into which you want the *dkumonitor* to be installed. `PORT` is the lower bound of a reserved range of 10 ports. *Grafana* will be exposed on `PORT`, *carbon* will be exposed on `PORT+1` and *carbonapi* on `PORT+2`.
 
 And thats it. Use `--help` on the installer to see the possible flags:
 
@@ -68,23 +70,59 @@ data_dir/bin/dkm start
 
 The command line usage is that of `supervisorctl`. Arguments are directly forwarded to `supervisorctl`. The `supervisord` is started if its pid file is not there, but it does not start any service by default. On MacOS, `dkumonitor` must be launched as root if you want disks and cpu metrics. This is a requirement of `collectd`. `telegraf` is able to get these metrics without privileged access, but it does not have he `processes` plugin used to track specifically JEKs and FEKs. Since they both have the usage, `telegraf`is not shipped. However, a config file for it is provided, as well as a commented section in the `supervisord` config file.
 
+You can then use the various services. Grafana as a default admin login that you can change interactively of in its config file before launch.
+
 ## Install the boot service
 
 Launch this command as `root`:
 
 ```
-data_dir/bin/dkmadmin install-boot
+DATA_DIR/bin/dkmadmin install-boot
 ```
 
 Optionally, the `--name` flag can be used in case you want to install several instances on the same host. Both init scripts and `systemd` are supported and automatically detected.
 
+## Update to new version of dkumonitor
+
+The binaries can be updated by running the installer in update mode:
+
+```
+./dkumonitor-x.x.x/installer -d DATA_DIR --update
+```
+
+No configuration files will be modified this way.
+
+## Additional modules
+
+The *dkumonitor* agent is *collectd* and is packaged with a wide variety of modules. Only a few of them are used by default. To use additional modules, add files with their configuration in `DATA_DIR/conf/collectd.d/`. You must ensure that the modules dependencies are installed. Please refer to the collectd documentation and use the `ldd` command onto you module onto the module file `./dkumonitor-x.x.x/lib/collectd/MODULE_NAME.so` to check if its dependencies are all available.
+
 ## Configure DSS
 
+### Full system monitoring
+
+Run the DSS monitoring integration:
+
+```
+DSS_DATA_DUR/bin/dssadmin install-monitoring-integration -graphiteServer DKU_MONITOR_HOST:DKU_MONITOR_PORT+1
+```
+
+### API nodes QPS for API Deployer 
+
+If you dont want a full system monitoring but still want in DSS monitoring with the API Deployer, add the following keys in `DSS_DATA_DIR/config/server.json`:
+
+```
+"graphiteCarbonServerURL":"DKU_MONITOR_HOST:DKU_MONITOR_PORT+1",
+"graphiteCarbonPrefix": "domain.example.hostname"
+```
+
+The value of the environment variable `DKU_GRAPHITE_ADDITIONAL_PREFIX` will be appended to the prefix if the variable is not empty. 
+
+### API Deployer
+
+Go to *API Deployer* `->` *Infrastructures* `->`*YOUR_INFRASTRUCTURE* `->` *Settinfs* `->` *API nodes*, and add the prefix of each API node.Go to *API Deployer* `->` *Infrastructures* `->`*YOUR_INFRASTRUCTURE* `->` *Settings* `->` *Monitoring*, and set the URL of the *carbonapi* endpoint which is `http://DKUMONITOR_HOST:DKUMONITOR_PORT+2`. You can then monitor the API nodes activity right from each service homepage in the API Deployer.
 
 
 # Build
-
-The build is supported on both Linux and MacOS.
 
 ## Requirements
 
