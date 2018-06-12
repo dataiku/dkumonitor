@@ -55,7 +55,7 @@ This generates the following files and directories:
 
 - `conf` contains the configuration files. Those can be customized and wont be modified by the update mode.
 - `bin` contains simlinks and configuration to link back to the packaged binaries.
-- `storage` is were every persistent data is kept. That is whisper files, the Grafana sqlite3 database as well as its sessions and plugins (if you install some). You might want to backup this one.
+- `storage` is where every persistent data is kept. That is whisper files, the Grafana sqlite3 database as well as its sessions and plugins (if you install some). You might want to backup this one.
 - `run` contains pid files, unix domain sockets and log files.
 - `static` is a symlink to the Grafana fronted static assets.
 
@@ -68,7 +68,7 @@ Launch the daemons:
 DATA_DIR/bin/dkm start
 ```
 
-You can use `stop`, `restart` and `status`. Each of this commands can be executed onto a single servicde. For instance, to restart only `collectd`, use `DATA_DIR/bin/dkm restart collectd`.
+You can use `stop`, `restart` and `status`. Each of this commands can be executed onto a single service. For instance, to restart only `collectd`, use `DATA_DIR/bin/dkm restart collectd`.
 
 You can then use the various services. Grafana has a default admin login that you can change interactively or in its config file before launch.
 
