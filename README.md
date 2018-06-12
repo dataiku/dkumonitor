@@ -19,7 +19,7 @@ It is designed to run on the monitored machine, but it is possible to run only t
 
 ## Requirements
 
-The target system must have `python2.7` installed.
+The target system must have `python2.7` installed. The pre-built package targets Linux 64 bits only.
 
 ## Installation
 
