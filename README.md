@@ -87,7 +87,7 @@ Launch this command as `root`:
 DATA_DIR/bin/dkmadmin install-boot
 ```
 
-Optionally, the `--name` flag can be used in case you want to install several instances on the same host. Both init scripts and `systemd` are supported and automatically detected.
+Optionally, the `-name` flag can be used in case you want to install several instances on the same host. Both init scripts and `systemd` are supported and automatically detected.
 
 ## Update to new version of dkumonitor
 
