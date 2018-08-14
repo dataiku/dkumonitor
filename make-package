@@ -2,11 +2,11 @@
 
 # Config
 GO_CARBON_REPO="github.com/lomik/go-carbon"
-GO_CARBON_VERSION="v0.12.0"
+GO_CARBON_VERSION="v0.13.0"
 CARBONAPI_REPO="github.com/go-graphite/carbonapi"
 CARBONAPI_VERSION="0.11.0"
 GRAFANA_REPO="github.com/grafana/grafana"
-GRAFANA_VERSION="v5.1.3"
+GRAFANA_VERSION="v5.2.2"
 COLLECTD_REPO="github.com/collectd/collectd"
 COLLECTD_VERSION="5.8.0"
 
