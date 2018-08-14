@@ -10,7 +10,7 @@ GRAFANA_VERSION="v5.2.2"
 COLLECTD_REPO="github.com/collectd/collectd"
 COLLECTD_VERSION="5.8.0"
 
-DKUMONITOR_VERSION="0.0.3"
+DKUMONITOR_VERSION="0.0.4"
 
 SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )"
 BUILD_DIR="${SCRIPT_DIR}/build"
@@ -130,7 +130,7 @@ exec_logged make
 cd - &>/dev/null
 
 log "Download carbonapi"
-exec_logged go get "${CARBONAPI_REPO}"
+exec_logged go get "${CARBONAPI_REPO}" || true
 log "Build carbonapi"
 cd "$GOPATH/src/$CARBONAPI_REPO"
 exec_logged git checkout "$CARBONAPI_VERSION"
@@ -177,11 +177,11 @@ exec_logged rsync -avz "$SCRIPT_DIR/conf/" "$DIST_DIR/conf/"
 exec_logged rsync -avz "$SCRIPT_DIR/templates/" "$DIST_DIR/templates/"
 exec_logged rsync -avz "$SCRIPT_DIR/dashboards/" "$DIST_DIR/dashboards/"
 exec_logged rsync -avz "$SCRIPT_DIR/licenses/" "$DIST_DIR/licenses/"
-exec_logged rsync -avz "$SCRIPT_DIR/LICENSE.txt" "$DIST_DIR/"
-exec_logged rsync -avz "$SCRIPT_DIR/COPYRIGHT.txt" "$DIST_DIR/"
+exec_logged rsync -avz "$SCRIPT_DIR/LICENSE" "$DIST_DIR/"
+exec_logged rsync -avz "$SCRIPT_DIR/COPYRIGHT" "$DIST_DIR/"
 exec_logged rsync -avz "$BUILD_DIR/goenv/src/$GO_CARBON_REPO/go-carbon" "$DIST_DIR/bin/go-carbon"
 exec_logged rsync -avz "$BUILD_DIR/goenv/src/$CARBONAPI_REPO/carbonapi" "$DIST_DIR/bin/carbonapi"
-exec_logged rsync -avz "$BUILD_DIR/goenv/src/$GRAFANA_REPO/bin/grafana-server" "$DIST_DIR/bin/"
+exec_logged rsync -avz "$BUILD_DIR/goenv/src/$GRAFANA_REPO/bin/linux-amd64/grafana-server" "$DIST_DIR/bin/"
 exec_logged rsync -avz "$BUILD_DIR/goenv/src/$GRAFANA_REPO/public/" "$DIST_DIR/static/"
 mkdir -p "$DIST_DIR/lib/collectd"
 exec_logged rsync -avz "$BUILD_DIR/collectd-${COLLECTD_VERSION}/collectd" "$DIST_DIR/bin/collectd"
