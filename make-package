@@ -1,16 +1,32 @@
-#!/usr/bin/env bash
+#!/bin/bash
+
+# Handling errors
+set -e
+set -o pipefail
+
+# Setup logging
+#set -x
+exec > >(while read log_line; do printf "[%s] %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$log_line"; done)
+exec 2>&1
 
 # Config
-GO_CARBON_REPO="github.com/lomik/go-carbon"
-GO_CARBON_VERSION="v0.13.0"
-CARBONAPI_REPO="github.com/go-graphite/carbonapi"
-CARBONAPI_VERSION="0.11.0"
+INFLUXDB_REPO="github.com/influxdata/influxdb"
+INFLUXDB_VERSION="v2.0.0-alpha.18"
+INFLUXDB_BINARY_REPO_URI="dl.influxdata.com/influxdb/releases"
+INFLUXDB_BINARY_FILE_darwin="influxdb_2.0.0-alpha.18_darwin_amd64.tar.gz"
+INFLUXDB_BINARY_FILE_linux="influxdb_2.0.0-alpha.18_linux_amd64.tar.gz"
 GRAFANA_REPO="github.com/grafana/grafana"
 GRAFANA_VERSION="v5.2.2"
-COLLECTD_REPO="github.com/collectd/collectd"
-COLLECTD_VERSION="5.8.0"
+TELEGRAF_REPO="github.com/influxdata/telegraf"
+TELEGRAF_VERSION="1.12.2"
 
-DKUMONITOR_VERSION="0.0.4"
+DKUMONITOR_VERSION="0.1.0-alpha"
+
+# Local definitions
+get_os_specific_var() {
+  var_name="${1}_${2}"
+  echo ${!var_name}
+}
 
 SCRIPT_DIR="$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )"
 BUILD_DIR="${SCRIPT_DIR}/build"
@@ -21,8 +37,26 @@ command -v realpath >/dev/null 2>&1 || realpath() {
     [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
 }
 
+# Detect ostype
+os_type=$(uname | tr '[:upper:]' '[:lower:]')
+case $os_type in
+	linux|darwin)
+		;;
+	*)
+		echo "OS Type $os_type is not supported."	
+    exit 1
+ 		;;
+esac
+
+# Resolves platform specifics
+INFLUXDB_BINARY_FILE=$(get_os_specific_var INFLUXDB_BINARY_FILE ${os_type})
+echo $INFLUXDB_BINARY_FILE
+
+
+
 do_build=1
 do_archive=1
+verbose=0
 while [ $# -gt 0 ]
 do
   case "$1" in
@@ -40,66 +74,54 @@ do
       DIST_DIR="$(realpath $2)/dkumonitor-$DKUMONITOR_VERSION"
       shift
       ;;
+    -v|--verbose)
+      verbose=1
+      ;;
      *) 
       ;;
   esac
   shift
 done
 
-log() {
-  current_time=$(date "+%Y-%m-%d %H:%M:%S")
-  printf "[+] %s - %s\n" "$current_time" "$@"
-}
-error_report() {
-  cat "$BUILD_DIR/build.log"
-  log "Execution failed, see log displayed above, stored in $BUILD_DIR/build.log"
-  exit 1
-}
-trap 'error_report $LINENO' ERR
-
 # Prepare build env
-
-log "Start build of dkumonitor $DKUMONITOR_VERSION"
+echo "Start build of dkumonitor $DKUMONITOR_VERSION"
 mkdir -p "$DIST_DIR/bin"
 export GOPATH="${BUILD_DIR}/goenv"
 mkdir -p "${GOPATH}"
 cd $BUILD_DIR
 
-exec_logged() {
-  echo "+" "$@" >> "$BUILD_DIR/build.log"
-  "$@" 2>> "$BUILD_DIR/build.log" >> "$BUILD_DIR/build.log" # '&>>' syntax fails on MacOS
-}
+
 
 # Check build requirements
 if ! command -v go > /dev/null; then
-  log "ERROR: go required to build dkumonitor"
+  echo "ERROR: go required to build dkumonitor"
   exit 1
 else
   goversion=$(go version | cut -d " " -f3)
   goversion=${goversion:2}
-  if python -c "import sys; sys.exit(not (${goversion//./,}) < (1,9,0));"; then
-    log "ERROR: go>=1.9 required to build dkumonitor"
+  if python -c "import sys; sys.exit(not (${goversion//./,}) < (1,11,0));"; then
+    echo "ERROR: go>=1.11 required to build dkumonitor"
     exit 1
   fi
 fi
 if [ ! -f node_modules/yarn/bin/yarn ]; then
   if ! command -v npm > /dev/null; then
-    log "ERROR: npm is required to build dkumonitor"
+    echo "ERROR: npm is required to build dkumonitor"
     exit 1
   else
-    log "Installs yarn builder"
-    exec_logged npm install yarn
+    echo "Installs yarn builder"
+    npm install yarn
   fi
 fi
 if [ ! -f pyenv/bin/activate ]; then
-  log "Installs the required pyenv"
+  echo "Installs the required pyenv"
   mkdir pyenv
-  exec_logged virtualenv -p python2.7 pyenv
+  virtualenv -p python2.7 pyenv
   source pyenv/bin/activate
-  exec_logged pip install pip --upgrade
-  exec_logged pip install setuptools --upgrade
+  pip install pip --upgrade
+  pip install setuptools --upgrade
 else
-  log "Loads existing pyenv"
+  echo "Loads existing pyenv"
   source pyenv/bin/activate
 fi
 
@@ -107,27 +129,33 @@ fi
 
 # Download python environement
 mkdir -p "$DIST_DIR/lib/python"
-exec_logged pip install \
-  --verbose \
+pip_command="pip install"
+if [[ 0 < "$verbose" ]]; then
+  pip_command="pip install --verbose"
+fi
+
+$pip_command \
   --disable-pip-version-check \
   --no-cache-dir \
   --no-binary=:all: \
   --target="$DIST_DIR/lib/python" \
   --requirement "$SCRIPT_DIR/requirements.txt"
-exec_logged find "$DIST_DIR/lib/python" -name "*.pyc" -delete
+find "$DIST_DIR/lib/python" -name "*.pyc" -delete
+
 
 if [[ 0 < "$do_build" ]]; then
 
-log "Download go-carbon"
-exec_logged go get "${GO_CARBON_REPO}"
-log "Build go-carbon"
-cd "$GOPATH/src/$GO_CARBON_REPO"
-exec_logged git checkout "$GO_CARBON_VERSION"
-exec_logged git checkout . # Discard previous patch
-echo "+ patch -p1 <${SCRIPT_DIR}/dkumonitor-gocarbon.patch" >> "$BUILD_DIR/build.log"
-patch -p1 <"${SCRIPT_DIR}/dkumonitor-gocarbon.patch" 2>> "$BUILD_DIR/build.log" >> "$BUILD_DIR/build.log"
-exec_logged make
+echo "Download InfluxDB"
+go get "${INFLUXDB_REPO}" || true
+echo "Build InfluxDB"
+cd "$GOPATH/src/$INFLUXDB_REPO"
+git checkout "$INFLUXDB_VERSION"
+env GO111MODULE=on go build -tags 'assets ' -o bin/darwin/influx ./cmd/influx
+env GO111MODULE=on go build -tags 'assets ' -o bin/darwin/influxd ./cmd/influxd
 cd - &>/dev/null
+
+echo "Done"
+exit 0
 
 log "Download carbonapi"
 exec_logged go get "${CARBONAPI_REPO}" || true
