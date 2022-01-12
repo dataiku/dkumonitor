@@ -1,2 +1,0 @@
-Copyright (c) 2014,2015 Damian Gryski <damian@gryski.com>
-All rights reserved.
