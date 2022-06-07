@@ -1,6 +1,13 @@
 Dataiku monitor
 ------------------
 
+# :warning: Legacy software :warning:
+
+`dkumonitor` is considered legacy software and will not be maintained in its current state. Please contact your Dataiku representative should you need to deploy a monitoring stack for Dataiku products.
+
+
+# Summary
+
 This projects bundles all the needed software to deploy system monitoring onto a cluster of machines. It is specifically designed to be easy to use with *Dataiku Data Science Studio*, including the API deployer feature.
 
 # Architecture
